@@ -1,0 +1,78 @@
+<md-dialog aria-label="Beacon">
+  <form ng-cloak>
+    <md-toolbar>
+      <div class="md-toolbar-tools">
+        <h2>Beacons Disponibles</h2>
+        <span flex></span>
+        <md-button class="md-icon-button" ng-click="cancel()">
+          <!-- <md-icon md-svg-src="img/icons/ic_close_24px.svg" aria-label="Close dialog"></md-icon> -->
+        </md-button>
+      </div>
+    </md-toolbar>
+
+    <md-dialog-content>
+      <div class="md-dialog-content">
+        <div layout-gt-xs="row">
+          <md-input-container class="md-block" flex-gt-xs>
+            <label>Referencia</label>
+            <input>
+          </md-input-container>
+        </div>
+
+
+      </div>
+
+      <md-list>
+        <md-list-item class="md-2-line" ng-repeat="item in todos">
+        <!-- <md-list-item class="md-2-line"> -->
+          <md-checkbox ng-model="item.done" ng-click="checkBoxClick(item.done,item)"></md-checkbox>
+          <div class="md-list-item-text">
+            <h2> chipid: {{ item.chipid }} </h2>
+            <h3> X: {{ item.x }} - Y: {{ item.y }}</h3>
+            <div layout-gt-xs = "row" ng-show="item.modeBool" class = "ng-hide">
+              <p> MINO: </p>
+              <input type="text" name="mino" ng-model="item.mino">
+            </div>
+            <div layout-gt-xs = "row" ng-show="item.modeBool" class = "ng-hide">
+              <p> MARJ: </p>
+              <input type="text" name="marj" ng-model="item.marj">
+            </div>
+
+            <div layout-gt-xs = "row">
+              <p> MODE (checked = programmer, unchecked = scanner): </p>
+              
+            </div>
+
+            <div layout-gt-xs = "row">
+              <input type="checkbox" name="" ng-model="item.modeBool" ng-click="modeCheckBoxClick(item)">
+              <p> {{ item.mode }} </p>
+            </div>
+
+            <!-- <div layout-gt-xs = "row">
+              <p> X: </p>
+              <input type="text" name="x" value = "0" ng-model = "x">
+            </div>
+
+            <div layout-gt-xs = "row">
+              <p> Y: </p>
+              <input type="text" name="y" value = "0" ng-model = "y">
+            </div> -->
+
+          </div>
+        </md-list-item>
+      </md-list>
+
+    </md-dialog-content>
+
+    <md-dialog-actions layout="row">
+      
+      <span flex></span>
+      <md-button ng-click="answer(false)">
+        cancelar
+      </md-button>
+      <md-button ng-click="answer(true)">
+        guardar
+      </md-button>
+    </md-dialog-actions>
+  </form>
+</md-dialog>
