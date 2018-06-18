@@ -1,5 +1,11 @@
 //This file has the function of register all the changes recieved through MQTT protocol into the MongoDB database.
 
+var commTools = require('./commTools.js');
+commTools.setProcess("UpdateService");
+var MongoClient = require('mongodb').MongoClient;
+var url = 'mongodb://localhost:27017';
+
+
 // Needed libraries in order to interact with both systems involved in this service.
 var MongoClient = require('mongodb').MongoClient;// Library to make different queries to the data base in MongoDB
 var mqtt = require('mqtt');//Library to interact with MQTT broker and messages
@@ -8,7 +14,7 @@ var mqtt = require('mqtt');//Library to interact with MQTT broker and messages
 var url = 'mongodb://localhost:27017';
 
 //client obeject is declared, it will make all the interactions with the broker.
-var client = mqtt.connect('http://10.42.0.1');
+var client = mqtt.connect('http://localhost');
 
 //In this "client" objetc all callbacks will be registered, firstone is "connect" callback, as it's name sais,
 //this callback will be executed when the clien has a successfull connection.
@@ -229,3 +235,40 @@ client.on('message',mqttCallBack);
 client.on('error', function(err) {
     console.log(err);
 });
+
+setInterval(function(){
+
+	MongoClient.connect(url, function(err, db) {
+		//Quite simple, if there is something wrong, throw an exception.
+		if (err) throw err;
+
+		// we declare the name of the database
+		var dbo = db.db("mydb");
+
+		/*Here we'll register the last time that the service work, this is for maintenance purposes.*/		
+		dbo.collection("Services").find({service:commTools.getProcess()}).toArray(function(err,result){
+			if(err) throw err;
+
+			if(result.length>0){
+				//console.log("updating service status");
+				let newValues = {$set:{date:new Date()}};
+				newValues.$set.time = newValues.$set.date.getTime();
+
+				//console.log(newValues);
+
+				dbo.collection("Services").updateOne({service:commTools.getProcess()},newValues,function(err,res){
+					if(err) throw err;
+					//console.log("updated!!");
+					commTools.imAlive();
+				});//End of "update" callback
+			}else{
+				dbo.collection("Services").insertOne(commTools.imAlive(),function(err,res){
+					if (err) throw err;
+				});
+			}
+
+			db.close()
+		});//End of find in services
+	});//End of "on-connect" callback
+
+},1000);

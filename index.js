@@ -8,17 +8,21 @@ var mqtt = require('mqtt');
 var MongoClient = require('mongodb').MongoClient;
 var io = require('socket.io')(http);
 var url = 'mongodb://localhost:27017';
-
+var fork = require('child_process').fork;
 var comandosPendientes = [];
+
+// var processingService = fork('./ProcessingService.js');
+// var updatingService = fork('./UpdateService.js');
 
 console.log("INTENTANDO CONECTAR");
 //var client = mqtt.connect('http://m14.cloudmqtt.com',options);
-var client = mqtt.connect('http://10.42.0.1');
+var client = mqtt.connect('http://localhost');
 // var client = mqtt.connect('http://127.0.0.1');
 var socketOn = false;
 
 client.on('connect',function(){
 	client.subscribe('update/general');
+	client.subscribe('stopWatch');
 	console.log("CONECCION MQTT REALIZADA**********");
 	socketOn = true;
 
@@ -36,7 +40,15 @@ mqttCallback = function(topic,message)
 					console.log("Ups...");
 				}
 			break;
+			case "stopWatch":
+				console.log("comando clock recibido.")
+				try{
+					io.emit("stopWatch",JSON.parse(message));
+				}catch(err){
+					console.log("Ups...");
+				}
 
+			break;
 			default:
 			break;
 		}

@@ -75,7 +75,8 @@ processingTools = (function(){
 				//console.log("****** COMPLETED ANALYSIS ******");
 
 				db.close();
-				dataIsReadyCallback();
+				if(dataIsReadyCallback)
+					dataIsReadyCallback();
 
 				//--- call function for the first time.
 			});//End of "find" callback
@@ -313,6 +314,17 @@ processingTools = (function(){
 			}
 		}
 
+		/*This variable will contain the last visited node in the route*/
+		var lastOne = undefined;
+
+		/*This to simple functions are seters and geters for the lastOne property.*/
+		var setLastOne = function(last){
+			lastOne = last;
+		}
+		var getLastOne = function(){
+			return lastOne;
+		}
+
 		//Here we declare and create an object with all the points of the route in a double linked list.
 		var routeStructure = (function(){
 
@@ -321,7 +333,7 @@ processingTools = (function(){
 			var nodesList = myRouteObject.beacons;
 			/*This is an empty object where the structure will be stored during it's creation*/
 			var result = {};
-
+			
 			/*To create the structure we visit every value in the "nodesList" array, with each visit an object
 			will be created*/
 			nodesList.forEach(function(xNode,xIndex){
@@ -337,26 +349,38 @@ processingTools = (function(){
 					/*This function manage to create an object that will have all the stadistic timing data*/
 					var getTimes = function(){
 
+						if(!time)
+							return undefined;
+
 						var timesOfVisit = {};
 						timesOfVisit.timeSinceStart = undefined;
 						timesOfVisit.timeSincePrevious = undefined;
 						timesOfVisit.timeUntilNext = undefined;
 						timesOfVisit.mainTime = time;
 
-						if(this.previous && this.previous.getTimes())
-							timesOfVisit.timeSincePrevious = timesOfVisit.mainTime - this.previous.getTimes().mainTime;
+						if(this.previous && this.previous.getTime()){
+							timesOfVisit.timeSincePrevious = timesOfVisit.mainTime - this.previous.getTime();
+							// console.log(this.previous.chipid,this.previous.getTime());
+						}
 
-						if(this.next && this.next.getTimes())
-							timesOfVisit.timeUntilNext = this.next.getTimes().mainTime - timesOfVisit.mainTime;
+						if(this.next && this.next.getTime()){
+							timesOfVisit.timeUntilNext = this.next.getTime() - timesOfVisit.mainTime;
+							// console.log(this.next.chipid,this.next.getTime());
+						}
 
-						if(result[nodesList[0]] && result[nodesList[0]].getTimes()){
-							timesOfVisit.timeSinceStart = timesOfVisit.mainTime - result[nodesList[0]].getTimes().mainTime;
+						if(result[nodesList[1]] && result[nodesList[1]].getTime()){
+							timesOfVisit.timeSinceStart = timesOfVisit.mainTime - result[nodesList[1]].getTime();
+							// console.log("tiempo de inicio",result[nodesList[1]]);
 						}
 
 						if(time)
 							return timesOfVisit;
 						else
 							return undefined;
+					}
+
+					var getTime = function(){
+						return time;
 					}
 
 					//Here we create the object to be returned
@@ -368,15 +392,18 @@ processingTools = (function(){
 							if(time)
 								sealed = true;
 						},
-						setTime:function(){//this function will store the time value only if it is possible
+						setTime:function(date){//this function will store the time value only if it is possible
 							if(!sealed){//if the object is not sealed,
-								time = new Date();//then we will save the instant of the register
-								if(previous){//if it has a previous already defined
-									previous.sealIt();//then we will seal that previous object.
+								time = date;//then we will save the instant of the register
+								console.log(xIndex+")","chipid: ",xNode,"'s time was set!, time: ",time);
+								if(this.previous && this.previous.getTime()){//if it has a previous already defined
+									this.previous.sealIt();//then we will seal that previous object.
+									console.log("previous: ",this.previous.chipid,"was sealed");
 								}//ends if
 							}//ends if
 						},//ends "setTime()" function
-						getTimes:getTimes
+						getTimes:getTimes,
+						getTime:getTime
 					};//Ends Object creation
 				}());
 
@@ -392,7 +419,9 @@ processingTools = (function(){
 		//This function sets the time of the visited object
 		var setVisitTime = function(visitedObject){
 			if(routeStructure[visitedObject.chipid]){
-				routeStructure[visitedObject.chipid].setTime();
+				console.log("time: "+visitedObject.registerDate+"will be set in: "+visitedObject.chipid);
+				routeStructure[visitedObject.chipid].setTime(visitedObject.registerDate);
+				setLastOne(visitedObject);
 				return true;
 			}else{
 				return false;
@@ -416,10 +445,14 @@ processingTools = (function(){
 			return _lapObject;
 		}
 
+		
+
 		return {
 			routeStructure:routeStructure,
 			setVisitTime:setVisitTime,
-			createLapObject:createLapObject
+			createLapObject:createLapObject,
+			setLastOne:setLastOne,
+			getLastOne:getLastOne
 		};
 	}
 
@@ -430,7 +463,6 @@ processingTools = (function(){
 		newTravelRecord:newTravelRecord
 	};
 }());
-
 
 /*This object manage all the different kinds of message that this service could send to any other part of the system.
 	"commTools" has the following functions:
@@ -454,13 +486,17 @@ commTools = (function(){
 
 			/*If it is now we create de updating object and we make it equal to the route object*/
 			var _updateBeacon = route;
+
+			//console.log("_updateBeacon",_updateBeacon);
+			//console.log("processingTools.beaconsInPlay",processingTools.beaconsInPlay);
 			_updateBeacon.beaconsObj = [];//We add an empty array to store objects that will ease ops in the frontend
 			//Now we create these objects.
 			_updateBeacon.beacons.forEach(function(b){
 				//We go and look for the object of the device in our route's list
+				//console.log("lets look for the object of: ",b);
 				let myDevice = processingTools.beaconsInPlay.find(function(device){
 					return device.chipid == b;
-				})
+				});
 				//Only if the device is found we proceed
 				if(myDevice){
 					// then we insert the object into the array "beaconsObj"
@@ -471,16 +507,17 @@ commTools = (function(){
 			/*The we assign the lastPosition object*/
 			_updateBeacon.lastPosition = lastPosition;
 			/*Finally we add the index of the last position in the route.*/
-			_updateBeacon.lastPositionIndex = route.beacons.findIndex(function(item){return item.chipid == lastPosition.chipid;});
+			_updateBeacon.lastPositionIndex = route.beacons.findIndex(function(item){return item == lastPosition.chipid;});
 			//We make the string needed to be send through MQTT protocol.
 			var _string = JSON.stringify(_updateBeacon);
 			/*Iniciamos coneccion entre el broker y el cliente MQTT*/
-			var client = mqtt.connect('http://10.42.0.1');
+			var client = mqtt.connect('http://localhost');
 			/*En cuanto la conección es exitosa se realizan las operaciones*/
 			client.on('connect',function(){
 				/*Se envía en dos topicos para podere así ver el trafico general o solo el trafico de una ruta en particular*/
 				client.publish('update/'+_updateBeacon.beaconMarj+_updateBeacon.beaconMino,_string);
 				client.publish('update/general',_string);
+				//console.log("update/general: ",_string);
 				//Al finalizar los envios el cliente se cierra para evitar problemas.
 				client.end();
 			});
@@ -488,23 +525,30 @@ commTools = (function(){
 	}
 
 	var watchCommand = function(command, route){
-		var client = mqtt.connect('http://10.42.0.1');
+		var client = mqtt.connect('http://localhost');
 
-		client.on('connect' function(){
+		client.on('connect', function(){
 			client.publish('stopWatch',JSON.stringify({command:command,route:route}));
 			client.end();
 		});
 	}
 
 	var imAlive = function(){
-		var client = mqtt.connect('http://10.42.0.1');
+		var client = mqtt.connect('http://localhost');
 		var serviceObject = {service:'ProcessingService',
-							 date:new Date(),
-							 time:this.date.getTime()
+							 date:new Date()
 							};
 
-		client.on('connect' function(){
-			client.publish('imAlive',JSON.stringify({service:"ProcessingService",date:new Date(),time:this.date.getTime()}));
+		serviceObject.time = serviceObject.date.getTime();
+
+		// console.log("imalive called");
+
+		client.on('connect', function(){
+
+			let _oImA = {service:"ProcessingService",date:new Date()}
+			_oImA.time = _oImA.date.getTime();
+			// console.log(_oImA);
+			client.publish('imAlive',JSON.stringify(_oImA));
 			client.end();
 		})
 
@@ -513,7 +557,8 @@ commTools = (function(){
 
 	_commTools = {
 		updateBeacon:updateBeacon,
-		watchCommand:watchCommand
+		watchCommand:watchCommand,
+		imAlive:imAlive
 	};
 
 
@@ -523,17 +568,120 @@ commTools = (function(){
 /*Object that will contain all the needed TravelRegisters*/
 travelRecords = {};
 
-
 /*This function has the task of processing and sending the required data to the front end in order to draw the different
 tuggers in the map.*/
 startUpdate = function(){
 
+	var checkRoutes = function(myDb,routesArray,routeI){
+
+		var db = myDb;
+		var _dbo = db.db("mydb");
+
+		var i = 0;
+
+		if(routeI)
+			i = routeI;
+
+		/*since we are interested in the closest point from the different devices we will create an object
+		with the conditions of our sorting.*/
+		var mySort = {distancia:1,registerTime:-1};
+
+		/*We must remember that all the registers are handeled by the UpdateService, wich crates different tables,
+		one table per each device that is detected by the system even if thisone is a tugger or not.
+
+		However each table is created with an specific name easy to identify and this numbers are the mayor value
+		and the minor value used to declar the route*/
+		let _table = "BeaconTable_"+routesArray[i].marj+routesArray[i].mino;
+
+		/*Now that we have the name of the corresponding table we proceed to make the looking.
+		This time the query statement is a little bit more complex, now we'll be asking to the database:
+		Give me all the devices in the route's corresponding table that have no more that 5000 ms in the database, order this
+		results from the smallest distance to the longest.*/
+		_dbo.collection(_table).find({"registerTime":{$gt:new Date()-5000}}).sort(mySort).toArray(function(err,resultBeacons){
+			/*Error handling*/
+			if (err) throw err;
+
+			/*It's necesary to check if there was any result before start working*/
+			if(resultBeacons.length>0){
+
+				/*Now we take the fist of the results since it is the one we where looking for, the closest point.*/
+				let resultBeacon = resultBeacons[0];
+
+				/*If we are visiting the first point of the route, then we'll create a new empty TravelRecord,
+				and we'll send the command to the front end to start the stopwatch of the lap.*/
+				if(resultBeacon.chipid == routesArray[i].beacons[1]){
+					travelRecords[_table] = processingTools.newTravelRecord(routesArray[i]);
+					commTools.watchCommand("start",routesArray[i]);
+					console.log("clock start");
+				}//ends if(this is the first beacon in route)
+
+				/*Just in case assuming that the first point we ever see is not the first, we check if we have the 
+				corresponding object, if not we create it.*/
+				if(!travelRecords[_table])
+					travelRecords[_table] = processingTools.newTravelRecord(routesArray[i]);
+				
+				/*This will happen everytime no matter what, we will set the visit time of the register, we must not
+				forget that the TravelRecord object has it's own filters and algorithms to avoid registering wrong data*/
+				let lastOne = travelRecords[_table].getLastOne();
+				console.log("the results of the query were:");
+				resultBeacons.forEach(function(__beacon){
+					console.log("beacon: ",__beacon.chipid);
+				})
+				travelRecords[_table].setVisitTime(resultBeacon);
+				commTools.updateBeacon(routesArray[i],resultBeacon);
+
+				/*If we are visitng the last point of the route, we'll create the resume object and upload it to the database,
+				also we'll stop the stopwatch in the front end.*/
+				if(resultBeacon.chipid == routesArray[i].beacons[routesArray[i].beacons.length-1] && lastOne.chipid != resultBeacon.chipid){
+
+					/*Object is created*/
+					let _lap = travelRecords[_table].createLapObject();
+
+					/*Object is uploaded*/
+					_dbo.collection("Laps").insertOne(_lap,function(err,res){
+						if (err) throw err;
+						//commTools.updateBeacon(routesArray[i],resultBeacon);
+						commTools.watchCommand("stop",routesArray[i]);
+						console.log("Lap registrada");
+
+						if(i<routesArray.length-1){
+							console.log("calling checkRoutes with index: ",i,"array length is: ",routesArray.length);
+							checkRoutes(db,routesArray,i+1);
+						}else{
+							// console.log("route checking done, db closed");
+							db.close();//closes the database
+						}
+					});//insertOne lap ends
+				}else{
+					if(i<routesArray.length-1){
+						console.log("calling checkRoutes with index: ",i,"array length is: ",routesArray.length);
+						checkRoutes(db,routesArray,i+1);
+					}else{
+						// console.log("route checking done, db closed");
+						db.close();//closes the database
+					}
+				}//ends if(this is the last beacon in route)
+			}else{
+				if(i<routesArray.length-1){
+					console.log("calling checkRoutes with index: ",i,"array length is: ",routesArray.length);
+					checkRoutes(db,routesArray,i+1);
+				}else{
+					// console.log("route checking done, db closed");
+					db.close();//closes the database
+				}
+			}//ends if(resultBeacons.length>0)
+
+
+		});//ends query for closest distance and most reasent value.
+	}//CheckRoutes function end
+
+	// console.log("updating...");
 	/*First thing the function does is connecting to the database, url variable is declared at the beginning of 
 	this code.*/
 	MongoClient.connect(url, function(err, db) {
 		//Quite simple, if there is something wrong, throw an exception.
 		if (err) throw err;
-
+		//console.log("database connected");
 		// we declare the name of the database
 		var dbo = db.db("mydb");
 
@@ -545,9 +693,16 @@ startUpdate = function(){
 			if(err) throw err;
 
 			if(result.length>0){
-				let newValues = {$set:{date:new Date(),time:this.date.getTime()}};
-				dbo.collection("BeaconsInPlay").updateOne({service:"ProcessingService"},newValues,function(err,res){
+				//console.log("updating service status");
+				let newValues = {$set:{date:new Date()}};
+				newValues.$set.time = newValues.$set.date.getTime();
+
+				//console.log(newValues);
+
+				dbo.collection("Services").updateOne({service:"ProcessingService"},newValues,function(err,res){
 					if(err) throw err;
+					//console.log("updated!!");
+					commTools.imAlive();
 				});//End of "update" callback
 			}else{
 				dbo.collection("Services").insertOne(commTools.imAlive(),function(err,res){
@@ -559,7 +714,7 @@ startUpdate = function(){
 
 		/*since we are interested in the closest point from the different devices we will create an object
 		with the conditions of our sorting.*/
-		var mySort = {distancia:1};
+		var mySort = {distancia:1,registerTime:1};
 
 		/*Important to say that all this is happening inside the connection attemp callback function, so if we have
 		reached this point in the code we are for sure, connected to the database*/
@@ -569,70 +724,17 @@ startUpdate = function(){
 			/*Once again error handling*/
 			if(err) throw err;
 
-			/*Now for each route in the database we will do the following steps*/
-			resultRoutes.forEach(function(route){
+			/*If there is no error we call the checkRoutes function that will check every route in the db
+			for updates. This function is declared an described in the begining of the startUpdate function
+			close to line 150 lines of code up the document.*/
+			checkRoutes(db,resultRoutes);
 
-				/*We must remember that all the registers are handeled by the UpdateService, wich crates different tables,
-				one table per each device that is detected by the system even if thisone is a tugger or not.
-
-				However each table is created with an specific name easy to identify and this numbers are the mayor value
-				and the minor value used to declar the route*/
-				let _table = "BeaconTable_"+route.marj+route.mino;
-
-				/*Now that we have the name of the corresponding table we proceed to make the looking.
-				This time the query statement is a little bit more complex, now we'll be asking to the database:
-				Give me all the devices in the route's corresponding table that have no more that 5000 ms in the database, order this
-				results from the smallest distance to the longest.*/
-				dbo.collection(_table).find({"registerTime":{$gt:new Date()-5000}}).sort(mySort).toArray(function(err,resultBeacons){
-					/*Error handling*/
-					if (err) throw err;
-
-					/*It's necesary to check if there was any result before start working*/
-					if(resultBeacons.length>0){
-
-						/*Now we take the fist of the results since it is the one we where looking for, the closest point.*/
-						let resultBeacon = resultBeacons[0];
-
-						/*If we are visiting the first point of the route, then we'll create a new empty TravelRecord,
-						and we'll send the command to the front end to start the stopwatch of the lap.*/
-						if(resultBeacon.chipid == route.beacons[1]){
-							travelRecords[_table] = processingTools.newTravelRecord(route);
-							commTools.watchCommand("start",route);
-						}//ends if(this is the first beacon in route)
-
-						/*Just in case assuming that the first point we ever see is not the first, we check if we have the 
-						corresponding object, if not we create it.*/
-						if(!travelRecords[_table])
-							travelRecords[_table] = processingTools.newTravelRecord(route);
-						
-						/*This will happen everytime no matter what, we will set the visit time of the register, we must not
-						forget that the TravelRecord object has it's own filters and algorithms to avoid registering wrong data*/
-						travelRecords[_table].setVisitTime(resultBeacon);
-						commTools.updateBeacon(route,resultBeacon);
-
-						/*If we are visitng the last point of the route, we'll create the resume object and upload it to the database,
-						also we'll stop the stopwatch in the front end.*/
-						if(resultBeacon.chipid == route.beacons[route.beacons.length-1]){
-
-							/*Object is created*/
-							let _lap = travelRecords[_table].createLapObject();
-
-							/*Object is uploaded*/
-							dbo.collection("Laps").insertOne(_lap,function(err,res){
-								if (err) throw err;
-								commTools.updateBeacon(route,resultBeacon);
-								commTools.watchCommand("stop",route);
-								console.log("Lap registrada");
-							});
-						}//ends if(this is the last beacon in route)
-					}//ends if(resultBeacons.length>0)
-				});//ends query for closest distance and most reasent value.
-			});//ends forEach route
-
-			db.close();//closes the database
 		});//End of "find routes" callback
 	});//ends connection callback to database
 }//ends "startUpdate()"
+
+processingTools.loadData();
+actual = {};
 
 /*We'll make all the checking and sending every second*/
 setInterval(startUpdate,1000);

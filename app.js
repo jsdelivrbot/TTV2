@@ -1,19 +1,6 @@
 // MODULE
 var tuggerTracker = angular.module('tuggerTracker',['ngAria','ngMaterial']);
 
-// tuggerTracker
-//   .controller('sidenavDemo2', function ($scope, $timeout, $mdSidenav) {
-//     $scope.toggleLeft = buildToggler('left');
-//     $scope.toggleRight = buildToggler('right');
-
-//     function buildToggler(componentId) {
-//       return function() {
-//         $mdSidenav(componentId).toggle();
-//       };
-//     }
-//   });
-
-
 tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSidenav","$interval","$http",function($scope,$timeout,$mdDialog,$mdSidenav,$interval,$http){
 // tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSidenav", "$http",function($scope,$timeout,$mdDialog,$mdSidenav){
 // tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog",function($scope,$timeout,$mdDialog){
@@ -41,6 +28,8 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
     $scope.tuggers = {};
     $scope.tuggerPaths = {};
 
+    /*This interval is the one that makes the time changes.*/
+
 	$interval(function() {
 		$scope.CurrentDate = new Date()
 		// $scope.miliSegundosNowLap = Math.floor(new Date().getMilliseconds()/10) - Math.floor($scope.ReferenceDate.getMilliseconds()/10);
@@ -64,9 +53,11 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 			$scope.segundosNowLap = "00";
 			$scope.miliSegundosNowLap = "00";
 		}
-		
 	},90);
 
+	//**************************************************************************************************
+	//***ALL THIS FUNCTIONS ARE TO CONTROLE THE STOPWATCH **********************************************
+	//**************************************************************************************************
 	$scope.startSW = function(){
 		$scope.ReferenceDate = new Date();
 		$scope.running = true;
@@ -169,9 +160,14 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 
 	console.log("$scope.datos",$scope.datos);
 
+//************************************************************************************************************
+//*** FUNCTIONS OF ROUTES CRUD *******************************************************************************
+//************************************************************************************************************
 
+	/*This function make the front end changes of the routs crud when a different route is selected*/
 	$scope.cambioDeRuta = function(){
 
+		/*This */
 		var rutaSelect = $scope.rutas.find(function(ruta){
 			return ruta.nombre == $scope.rutaSeleccionada.nombre;
 		});
@@ -964,6 +960,7 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 	}
 
 
+	/*In order to draw the position of the tugger we need to create the d3js elements*/
 	$scope.drawTuggersHistory = function(updateMessage){
 
 		var newMower = function(){
@@ -976,13 +973,13 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 			let routeName = updateMessage.marj+updateMessage.mino;
 
 			if($scope.tuggers[routeName] && $scope.tuggers[routeName].draw){
-				$scope.tuggers[routeName].draw.transition().duration(300).attr("cx",$scope.scales.x(lastObj.x))
-											  .transition().duration(300).attr("cy",$scope.scales.y(lastObj.y));
+				$scope.tuggers[routeName].draw.transition().duration(300).attr("cx",$scope.scales.x(lastObj.x+0.5))
+											  .transition().duration(300).attr("cy",$scope.scales.y(lastObj.y+0.5));
 
 				let _route = [];
 
 				for(var i = 0;i<=updateMessage.lastPositionIndex;i++){
-					_route.push({x:beaconsObj[i].x,y:beaconsObj[i].y})
+					_route.push({x:updateMessage.beaconsObj[i].x,y:updateMessage.beaconsObj[i].y})
 				}
 
 				var lineFunction = d3.svg.line()
@@ -1005,7 +1002,7 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 			}
 		}
 		else{
-			rutas.forEach(function(route){
+			$scope.rutas.forEach(function(route){
 
 				let firstOne = $scope.valoresDialogo.find(function(beacon){ return beacon.chipid == route.beacons[0] });
 
@@ -1018,9 +1015,10 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 					$scope.groups.position.selectAll("circle").remove();
 					
 					$scope.tuggers[routeName].draw = $scope.groups.position.append("circle")
-																		   .attr("r",$scope.circleRadius);
-																		   .attr("cx",$scales.x(firstOne.x+0.5))
-																		   .attr("cy",$scales.y(firstOne.y+0.5));
+																		   .attr("r",$scope.circleRadius)
+																		   .attr("cx",$scope.scales.x(firstOne.x+0.5))
+																		   .attr("cy",$scope.scales.y(firstOne.y+0.5))
+																		   .attr("class","position");
 					//
 
 				} 
@@ -1156,7 +1154,8 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 		$scope.groups = { path:$scope.svgContainer.append("g"),
 		                position:$scope.svgContainer.append("g") };
 
-		$scope.drawMowerHistory2($scope.groups, $scope.scales, [$scope.start,$scope.start2]);
+		//$scope.drawMowerHistory2($scope.groups, $scope.scales, [$scope.start,$scope.start2]);
+		$scope.drawTuggersHistory();
 	}
 
 	$(window).on("resize.doResize", function (){
@@ -1266,7 +1265,12 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 			console.log(msg)
 		});
 
+		socket.on('update/general',function(msg){
 
+			console.log(msg);
+			$scope.drawTuggersHistory(msg);
+
+		});
 
 		socket.on('stopwatch',function(msg){
 			// if(msg.command === "start"){
@@ -1275,6 +1279,14 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 			// else{
 			// 	$scope.stopSW();
 			// }
+		});
+
+		socket.on('stopWatch',function(msg){
+			if(msg.command == "start"){
+				$scope.startSW();
+			}else{
+				$scope.stopSW();
+			}
 		});
 
 		return false;
