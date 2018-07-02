@@ -11,8 +11,10 @@ var url = 'mongodb://localhost:27017';
 var fork = require('child_process').fork;
 var comandosPendientes = [];
 
-// var processingService = fork('./ProcessingService.js');
-// var updatingService = fork('./UpdateService.js');
+var processingService = fork('./ProcessingService.js');
+console.log("PROCESSING SERVICE..... READY!");
+var updatingService = fork('./UpdateService.js');
+console.log("UPDATE SERVICE..... READY!");
 
 console.log("INTENTANDO CONECTAR");
 //var client = mqtt.connect('http://m14.cloudmqtt.com',options);
@@ -345,6 +347,10 @@ app.get('/updateBeacon',function(req,res){
 										client.publish('nodeCode/'+nuevosValoresObjeto.chipid,'{"command":1,"load":"manager.sendAtCommand(\'MARJ\',\'0x'+nuevosValoresObjeto.marj+'\')"}');
 									},1000);	
 								}
+							break;
+
+							default:
+								console.log("default case!");
 							break;
 
 						}

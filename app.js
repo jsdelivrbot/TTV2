@@ -2,8 +2,8 @@
 var tuggerTracker = angular.module('tuggerTracker',['ngAria','ngMaterial']);
 
 tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSidenav","$interval","$http",function($scope,$timeout,$mdDialog,$mdSidenav,$interval,$http){
-// tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSidenav", "$http",function($scope,$timeout,$mdDialog,$mdSidenav){
-// tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog",function($scope,$timeout,$mdDialog){
+	// tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSidenav", "$http",function($scope,$timeout,$mdDialog,$mdSidenav){
+	// tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog",function($scope,$timeout,$mdDialog){
 
 	$scope.CurrentDate = new Date();
 	$scope.ReferenceDate = new Date();
@@ -537,7 +537,10 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 
 								nuevosValores.mode = item.mode;
 
+								nuevosValores.descripcion = item.descripcion;
+
 								nuevosValoresJsonString = JSON.stringify(nuevosValores);
+
 
 								$scope.tempURL = "";
 								$scope.tempURL = $scope.originURL+"/updateBeacon?nuevosValores="+nuevosValoresJsonString;

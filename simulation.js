@@ -50,6 +50,58 @@ var startDemo = function(puntos,index,time){
 	}
 }
 
+var startRandomDemo = function(puntos,index,lapNo,stop,time){
+
+	let i = 0;
+	let t = Math.floor((Math.random()*2000)+4000);
+	console.log("next time: ",t);
+	let ln = 0;
+	let s = 1;
+
+	if(time)
+		t = time;
+	console.log("iniciando, intervalos: ",t);
+	if(index)
+		i = index;
+
+	if(!puntos)
+		puntos = route;
+
+	if(lapNo)
+		ln = lapNo;
+
+	if(stop)
+		s = stop;
+
+	console.log("i vale: ",i);
+
+	if(i<puntos.length){
+
+		console.log("entro al if");
+		let objeto = {}
+
+		objeto.minLoad = "17C1";
+		objeto.maxLoad = "000F";
+		objeto.distancia = 1;
+		objeto.chipid = puntos[i];
+
+		let _string = JSON.stringify(objeto);
+
+		sendLocation(_string);
+		console.log("tugger:",_string);
+
+
+		setTimeout(function(){
+			startRandomDemo(puntos,i+1);
+		},t);
+	}else if(ln < s){
+		ln++;
+		startRandomDemo(puntos,undefined,ln,stop);
+	}else{
+		console.log("sim laps done!!");
+	}
+}
+
 var newControledMove = function(routeToFollow){
 
 	var i = 0;
@@ -85,7 +137,8 @@ var newControledMove = function(routeToFollow){
 
 simTools = {
 	startDemo:startDemo,
-	newControledMove:newControledMove
+	newControledMove:newControledMove,
+	startRandomDemo:startRandomDemo
 };
 
 module.exports = simTools;

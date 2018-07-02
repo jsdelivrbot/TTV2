@@ -357,6 +357,7 @@ processingTools = (function(){
 						timesOfVisit.timeSincePrevious = undefined;
 						timesOfVisit.timeUntilNext = undefined;
 						timesOfVisit.mainTime = time;
+						timesOfVisit.rawMainTime = time.getTime();
 
 						if(this.previous && this.previous.getTime()){
 							timesOfVisit.timeSincePrevious = timesOfVisit.mainTime - this.previous.getTime();
