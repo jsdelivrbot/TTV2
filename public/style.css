@@ -89,5 +89,7 @@ svg {
 
 .path {
 	stroke-width: 3px;
-	stroke: #2973F2;
+	/*stroke: #2973F2;*/
+	/*stroke: green;*/
+
 }

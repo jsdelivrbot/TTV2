@@ -10,6 +10,8 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 	$scope.running = false;
 	$scope.update = true;
 	$scope.middle = false;
+
+	$scope.lineColors = ['red','blue','green','orange','purple'];
 	
 	$scope.originURL = window.location.origin;
 	console.log("$scope.originURL", window.location.origin);
@@ -973,9 +975,15 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 		if(updateMessage){
 
 			let lastObj = updateMessage.beaconsObj[updateMessage.lastPositionIndex];
-			let routeName = updateMessage.marj+updateMessage.mino;
+			let routeName = ""+updateMessage.marj+updateMessage.mino;
+
+			console.log("updateMessage in drawTuggersHistory: ",updateMessage);
+			console.log("routeName",routeName);
+			console.log("$scope.tuggers",$scope.tuggers);
 
 			if($scope.tuggers[routeName] && $scope.tuggers[routeName].draw){
+
+				console.log("$scope.tuggers["+routeName+"].draw",$scope.tuggers[routeName].draw);
 				$scope.tuggers[routeName].draw.transition().duration(300).attr("cx",$scope.scales.x(lastObj.x+0.5))
 											  .transition().duration(300).attr("cy",$scope.scales.y(lastObj.y+0.5));
 
@@ -992,10 +1000,26 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 
 				$scope.groups.path.selectAll(".path").remove();
 
-				var linePath = $scope.groups.path.append("path")
+				// var linePath = $scope.groups.path.append("path")
+
+				//console.log("$scope.tuggers",$scope.tuggers);
+				let tuggersKeys = Object.keys($scope.tuggers);
+				console.log("routesKeys",tuggersKeys);
+				let routeIndex = tuggersKeys.findIndex(function(key){
+					return key == routeName;
+				})
+
+				let routeColor = 'black';
+
+				if(routeIndex>=0)
+					routeColor = $scope.lineColors[routeIndex];
+
+				$scope.tuggers[routeName].lines = $scope.groups.path.append("path")
 											.attr("d",lineFunction(_route))
 											.attr("class","path")
-											.attr("fill","none");
+											.attr("fill","none")
+											.attr('stroke',routeColor);
+
 
 
 				$scope.groups.path.select("path")
@@ -1015,14 +1039,14 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 					if(!$scope.tuggers[routeName])
 						$scope.tuggers[routeName] = {};
 
-					$scope.groups.position.selectAll("circle").remove();
+					//$scope.groups.position.selectAll("circle").remove();
 					
 					$scope.tuggers[routeName].draw = $scope.groups.position.append("circle")
 																		   .attr("r",$scope.circleRadius)
 																		   .attr("cx",$scope.scales.x(firstOne.x+0.5))
 																		   .attr("cy",$scope.scales.y(firstOne.y+0.5))
 																		   .attr("class","position");
-					//
+					console.log("ruta creada: ",routeName);
 
 				} 
 			});

@@ -627,7 +627,7 @@ startUpdate = function(){
 				console.log("the results of the query were:");
 				resultBeacons.forEach(function(__beacon){
 					console.log("beacon: ",__beacon.chipid);
-				})
+				});
 				travelRecords[_table].setVisitTime(resultBeacon);
 				commTools.updateBeacon(routesArray[i],resultBeacon);
 

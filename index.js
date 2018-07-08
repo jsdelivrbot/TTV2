@@ -126,7 +126,7 @@ app.get('/demoMongo',function(req,res)
 		}
 
 		var dbo = db.db("mydb");
-		dbo.collection("BeaconsInPlay").find({}).toArray(function(err,result){
+		dbo.collection("BeaconsInPlay").find({}).sort({chipid:1}).toArray(function(err,result){
 			if(err){
 				console.log("error en query");
 				throw err;
