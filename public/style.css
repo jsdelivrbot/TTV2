@@ -77,7 +77,7 @@ svg {
 }
 
 .position {
-	fill: red;
+	/*fill: red;*/
 	stroke-width: 4px;
 	stroke: black;
 }

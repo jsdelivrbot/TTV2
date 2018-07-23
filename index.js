@@ -27,7 +27,6 @@ client.on('connect',function(){
 	client.subscribe('stopWatch');
 	console.log("CONECCION MQTT REALIZADA**********");
 	socketOn = true;
-
 });
 
 

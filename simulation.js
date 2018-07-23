@@ -12,7 +12,7 @@ var route2minLoad = "C6E0";
 var route2maxLoad = "000F";
 
 var sendLocation = function(message){
-	var client = mqtt.connect('http://localhost');
+	var client = mqtt.connect('http://10.42.0.1');
 
 	client.on('connect', function(){
 		client.publish('tugger',message);
@@ -61,7 +61,7 @@ var startDemo = function(puntos,index,time){
 var startRandomDemo2 = function(puntos,index,lapNo,stop,time){
 
 	let i = 0;
-	let t = Math.floor((Math.random()*4000)+4000);
+	let t = Math.floor((Math.random()*4000)+1500);
 	console.log("next time: ",t);
 	let ln = 0;
 	let s = 1;
@@ -113,7 +113,7 @@ var startRandomDemo2 = function(puntos,index,lapNo,stop,time){
 var startRandomDemo = function(puntos,index,lapNo,stop,time){
 
 	let i = 0;
-	let t = Math.floor((Math.random()*4000)+4000);
+	let t = Math.floor((Math.random()*4000)+1000);
 	console.log("next time: ",t);
 	let ln = 0;
 	let s = 1;

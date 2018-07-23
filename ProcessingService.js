@@ -438,9 +438,12 @@ processingTools = (function(){
 			_lapObject.routeMino = myRouteObject.mino;
 			_lapObject.routeMarj = myRouteObject.marj;
 			_lapObject.nombre = myRouteObject.nombre;
+			_lapObject.rawTime = 0;
 
-			myRouteObject.beacons.forEach(function(xBeacon){
+			myRouteObject.beacons.forEach(function(xBeacon,xBeaconIndex,xBeaconArray){
 				_lapObject[xBeacon] = routeStructure[xBeacon].getTimes();
+				if(xBeaconIndex == xBeaconArray.length-1)
+					_lapObject.rawTime = routeStructure[xBeacon].getTimes().rawMainTime;
 			});
 
 			return _lapObject;

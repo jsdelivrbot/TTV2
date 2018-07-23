@@ -983,9 +983,23 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 
 			if($scope.tuggers[routeName] && $scope.tuggers[routeName].draw){
 
+				let tuggersKeys = Object.keys($scope.tuggers);
+				//console.log("routesKeys",tuggersKeys);
+				let routeIndex = tuggersKeys.findIndex(function(key){
+					return key == routeName;
+				})
+
+				let routeColor = 'black';
+
+				if(routeIndex>=0)
+					routeColor = $scope.lineColors[routeIndex];
+
+				console.log("ROUTE COLOR",routeName,routeColor);
+
 				console.log("$scope.tuggers["+routeName+"].draw",$scope.tuggers[routeName].draw);
 				$scope.tuggers[routeName].draw.transition().duration(300).attr("cx",$scope.scales.x(lastObj.x+0.5))
-											  .transition().duration(300).attr("cy",$scope.scales.y(lastObj.y+0.5));
+											  .transition().duration(300).attr("cy",$scope.scales.y(lastObj.y+0.5))
+											  .attr("fill",routeColor);
 
 				let _route = [];
 
@@ -998,33 +1012,32 @@ tuggerTracker.controller("myController",["$scope","$timeout","$mdDialog","$mdSid
 									.y(function(d){return $scope.scales.y(d.y+0.5)})
 									.interpolate("linear");
 
-				$scope.groups.path.selectAll(".path").remove();
+				$scope.groups.path.selectAll(".p"+routeName).remove();
+
+				//console.log("CLASS TO LOOK FOR... ",".path."+routeName);
+				//console.log($scope.groups.path.selectAll(".path."+routeName));
+
+				//$scope.tuggers[routeName].lines.selectAll(".path").remove();
 
 				// var linePath = $scope.groups.path.append("path")
 
 				//console.log("$scope.tuggers",$scope.tuggers);
-				let tuggersKeys = Object.keys($scope.tuggers);
-				console.log("routesKeys",tuggersKeys);
-				let routeIndex = tuggersKeys.findIndex(function(key){
-					return key == routeName;
-				})
+				
 
-				let routeColor = 'black';
-
-				if(routeIndex>=0)
-					routeColor = $scope.lineColors[routeIndex];
+				
 
 				$scope.tuggers[routeName].lines = $scope.groups.path.append("path")
 											.attr("d",lineFunction(_route))
-											.attr("class","path")
+											.attr("class","path p"+routeName)
 											.attr("fill","none")
 											.attr('stroke',routeColor);
 
 
 
-				$scope.groups.path.select("path")
-								.data(_route)
-								.exit().remove()
+				//$scope.groups.path.select("path")
+				// $scope.tuggers[routeName].lines.selectAll("path")
+				// 				.data(_route)
+				// 				.exit().remove()
 
 			}
 		}
