@@ -12,7 +12,7 @@ var route2minLoad = "C6E0";
 var route2maxLoad = "000F";
 
 var sendLocation = function(message){
-	var client = mqtt.connect('http://10.42.0.1');
+	var client = mqtt.connect('http://localhost');
 
 	client.on('connect', function(){
 		client.publish('tugger',message);

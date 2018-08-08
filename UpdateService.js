@@ -3,7 +3,7 @@
 var commTools = require('./commTools.js');
 commTools.setProcess("UpdateService");
 var MongoClient = require('mongodb').MongoClient;
-var url = 'mongodb://localhost:27017';
+var url = 'mongodb://10.42.0.1:27017';
 
 
 // Needed libraries in order to interact with both systems involved in this service.
@@ -11,10 +11,10 @@ var MongoClient = require('mongodb').MongoClient;// Library to make different qu
 var mqtt = require('mqtt');//Library to interact with MQTT broker and messages
 
 //this is url to connect to the MongoDB server.
-var url = 'mongodb://localhost:27017';
+var url = 'mongodb://10.42.0.1:27017';
 
 //client obeject is declared, it will make all the interactions with the broker.
-var client = mqtt.connect('http://localhost');
+var client = mqtt.connect('http://10.42.0.1');
 
 //In this "client" objetc all callbacks will be registered, firstone is "connect" callback, as it's name sais,
 //this callback will be executed when the clien has a successfull connection.
@@ -26,9 +26,7 @@ client.on('connect',function(){
 });
 
 /*This is a general function, it will contain other local functions for each topic that the client needs to 
-suscribe. 
-
-Any other function required for any other topic, need to be declar as local inside this main callback function*/
+suscribe. Any other function required for any other topic, need to be declar as local inside this main callback function*/
 mqttCallBack = function(topic,message){
 
 	//CallBack function for 'node/register' topic:
@@ -77,20 +75,23 @@ mqttCallBack = function(topic,message){
 
 					//If there is no previews register with that chipID, then we create a newone
 					if(result.length<=0){
+						objeto.imAlive = new Date();
 						dbo.collection("BeaconsInPlay").insertOne(objeto, function(err, res) {
 							if (err) throw err;
-							console.log("****** NEW DEVICE SUCCESSFULLY REGISTERED ******");
+							//console.log("****** NEW DEVICE SUCCESSFULLY REGISTERED ******");
 							//database access is closed, this one is a very important step.
 							db.close();
 						});//End of "insertOne" callback
 					}
 					else
 					{
-						console.log("UPDATE OBJECT IN $SET IS:",objeto);
+						//console.log("UPDATE OBJECT IN $SET IS:",objeto);
+						objeto.imAlive = new Date();
 						var newValues = {$set:objeto};
 						dbo.collection("BeaconsInPlay").updateOne(query,newValues,function(err,res){
 							if(err) throw err;
-							console.log("****** DEVICE SUCCESSFULLY UPDATED ******!");
+							//console.log("****** DEVICE SUCCESSFULLY UPDATED ******!");
+							//console.log(objeto);
 							db.close();
 						});//End of "update" callback
 					}
@@ -162,6 +163,13 @@ mqttCallBack = function(topic,message){
 				var query = {chipid:objeto.chipid};
 				var tableName = "BeaconTable_"+marj+mino; 
 
+
+				//This variable is the query, it's used to locate the register in the database.
+				var query = {chipid:objeto.chipid};
+
+					
+
+
 				dbo.collection(tableName).find(query).toArray(function(err,result){
 					if(err) throw err;
 
@@ -169,22 +177,66 @@ mqttCallBack = function(topic,message){
 					if(result.length<=0){
 						dbo.collection(tableName).insertOne(objeto, function(err, res) {
 							if (err) throw err;
-							console.log("****** NEW TABLE SUCCESSFULLY REGISTERED ******");
+							//console.log("****** NEW TABLE SUCCESSFULLY REGISTERED ******");
 							//database access is closed, this one is a very important step.
 							db.close();
 						});//End of "insertOne" callback
 					}
 					else
 					{
-						console.log("UPDATE OBJECT IN $SET IS:",objeto);
+						//console.log("UPDATE OBJECT IN $SET IS:",objeto);
 						var newValues = {$set:objeto};
 						dbo.collection(tableName).updateOne(query,newValues,function(err,res){
 							if(err) throw err;
-							console.log("****** BEACON TABLE: "+tableName+" UPDATED ******!");
+							//console.log("****** BEACON TABLE: "+tableName+" UPDATED ******!");
 							db.close();
 						});//End of "update" callback
 					}
 				});//End of "find" callback
+			});//End of "on-connect" callback
+		}
+
+		var registerImAlive = function(myChipId){
+
+			//console.log("TRYING TO REGISTER A LIVING DEVICE.... MAKE A SIDE!!");
+
+			var MongoClient2 = require('mongodb').MongoClient;
+
+			MongoClient2.connect(url, function(err, db) {
+				//Quite simple, if there is something wrong, throw an exception.
+				if (err) throw err;
+
+				let dbo = db.db("mydb");
+
+				var updateObject = {};
+				updateObject.imAlive = new Date();
+				//This variable is the query, it's used to locate the register in the database.
+				var query = {chipid:myChipId};
+
+					
+				dbo.collection("BeaconsInPlay").find(query).toArray(function(err,result){
+					if(err) throw err;
+
+					//If there is no previews register with that chipID, then we create a newone
+					if(result.length>0){
+						
+
+						var newValues = {$set:updateObject};
+						dbo.collection("BeaconsInPlay").updateOne(query,newValues,function(err,res){
+							if(err) throw err;
+							//console.log("****** DEVICE:"+myChipId+" is alive! ******!");
+							db.close();
+						});//End of "update" callback
+					}else{
+						// console.log("||||||||||||||||||||||||||||||||||||||||||")
+						// console.log("NOT WORKING....")
+						// console.log("||||||||||||||||||||||||||||||||||||||||||")
+						db.close();
+					}
+				});//End of "find" callback
+
+
+				
 			});//End of "on-connect" callback
 		}
 
@@ -210,7 +262,9 @@ mqttCallBack = function(topic,message){
 		//if messageObject was properly created software proceed
 		if(messageObject){
 			//registerBeacon function is a local function declared and explained before in this code.
+			//console.log("NEW NEW NEW NEW NEW NEW NEW NEW NEW ");
 			updateDevice(messageObject.distancia, messageObject.UUID, messageObject.minLoad, messageObject.maxLoad,messageObject.chipid);
+			registerImAlive(messageObject.chipid);
 		}
 	}
 
@@ -228,7 +282,6 @@ mqttCallBack = function(topic,message){
 			break;
 	}
 }
-
 
 client.on('message',mqttCallBack);
 

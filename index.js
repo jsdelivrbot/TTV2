@@ -7,9 +7,11 @@ var http = require('http').Server(app);
 var mqtt = require('mqtt');
 var MongoClient = require('mongodb').MongoClient;
 var io = require('socket.io')(http);
-var url = 'mongodb://localhost:27017';
+var url = 'mongodb://10.42.0.1:27017';
 var fork = require('child_process').fork;
 var comandosPendientes = [];
+
+var debug = false;
 
 var processingService = fork('./ProcessingService.js');
 console.log("PROCESSING SERVICE..... READY!");
@@ -18,7 +20,7 @@ console.log("UPDATE SERVICE..... READY!");
 
 console.log("INTENTANDO CONECTAR");
 //var client = mqtt.connect('http://m14.cloudmqtt.com',options);
-var client = mqtt.connect('http://localhost');
+var client = mqtt.connect('http://10.42.0.1');
 // var client = mqtt.connect('http://127.0.0.1');
 var socketOn = false;
 
@@ -36,7 +38,9 @@ mqttCallback = function(topic,message)
 		switch(topic){
 			case "update/general":
 				try{
-					io.emit("update/general",JSON.parse(message));
+					let msge = JSON.parse(message);
+					io.emit("update/general",msge);
+					console.log(msge.beacons[msge.lastPositionIndex],"-",msge.lastPositionIndex);
 				}catch(err){
 					console.log("Ups...");
 				}
@@ -98,7 +102,6 @@ app.get('/app.js',function(req,res)
 
 app.get('/sideBar.js',function(req,res)
 {
-	//res.send('<h1>Hello world</h1>');
 	res.sendFile(__dirname+'/sideBar.js');
 });
 
@@ -168,7 +171,7 @@ app.get('/getRutas',function(req,res){
 			var respuestaString = "";
 
 			valores.forEach(function(item,idx,array){
-				console.log("idx",idx);
+				//console.log("idx",idx);
 				respuestaString += JSON.stringify(item);
 				if(!(idx === array.length - 1) && array.length>1){
 					respuestaString += "JS";
@@ -176,11 +179,11 @@ app.get('/getRutas',function(req,res){
 			})
 
 			res.send(respuestaString);
-			console.log("se ha enviado la respuesta",respuestaString);
+			//console.log("se ha enviado la respuesta",respuestaString);
 
 		}
 		else{
-			console.log("el resultado no esta definido");
+			//console.log("el resultado no esta definido");
 		}	
 	}
 
@@ -194,14 +197,17 @@ app.get('/getRutas',function(req,res){
 		rutasTugger.find({}).toArray(function(err,res){
 			if( err) throw err;
 
-			console.log("RESULTADO DE BUSCAR RUTAS",res);
+			if(debug){
+				console.log("RESULTADO DE BUSCAR RUTAS",res);
+			}
 
 			var visitaRuta = function(arregloRutas,indexRutas){
 
 				var nuevoObjetoRuta = arregloRutas[indexRutas];
 
 				nuevoObjetoRuta.objetosBeacon = [];
-				console.log("LA RUTA A EVALUAR",nuevoObjetoRuta);
+				if (debug)
+					console.log("LA RUTA A EVALUAR",nuevoObjetoRuta);
 
 				var leerBeacons = function(arregloBeacons, indexBeacons){
 
@@ -209,12 +215,14 @@ app.get('/getRutas',function(req,res){
 
 					var query = {chipid:arregloBeacons[indexBeacons]};
 
-					console.log("EL QUERY A USAR PARA EL BEACON: ",query);
+					if(debug)
+						console.log("EL QUERY A USAR PARA EL BEACON: ",query);
 
 					beaconsInPlay.find(query).toArray(function(err,res){
 						if(err) throw err;
 
-						console.log("EL RESULTADO DEL QUERY ANTERIOR FUE: ",res);
+						if(debug)
+							console.log("EL RESULTADO DEL QUERY ANTERIOR FUE: ",res);
 
 						if(res){
 							if(res.length>0){
@@ -224,19 +232,23 @@ app.get('/getRutas',function(req,res){
 								//console.log("ahora la nueva ruta contiene: ",nuevoObjetoRuta);
 
 								if(indexBeacons+1<arregloBeacons.length){
-									console.log("SE ESTA LEYENDO EL BEACON",indexBeacons,"DE LA RUTA",indexRutas);
+									if(debug)
+										console.log("SE ESTA LEYENDO EL BEACON",indexBeacons,"DE LA RUTA",indexRutas);
 									leerBeacons(arregloBeacons,indexBeacons+1);
 								}
 								else{
 
-									console.log("se han leido todos los beacons")
-									console.log("SE HA AGREGADO EN RESPUESTA",nuevoObjetoRuta);
+									if(debug){
+										console.log("se han leido todos los beacons")
+										console.log("SE HA AGREGADO EN RESPUESTA",nuevoObjetoRuta);
+									}
 									respuesta.push(nuevoObjetoRuta);
 									if(indexRutas+1<arregloRutas.length){
 										visitaRuta(arregloRutas,indexRutas+1);
 									}
 									else{
-										console.log("se han leido todas las rutas");
+										if(debug)
+											console.log("se han leido todas las rutas");
 										db.close();
 										cargarDatos(respuesta);
 									}
@@ -252,14 +264,18 @@ app.get('/getRutas',function(req,res){
 					leerBeacons(nuevoObjetoRuta.beacons,0);
 				}
 				else{
-					console.log("se han leido todos los beacons")
-					console.log("SE HA AGREGADO EN RESPUESTA",nuevoObjetoRuta);
+					if(debug){
+						console.log("se han leido todos los beacons")
+						console.log("SE HA AGREGADO EN RESPUESTA",nuevoObjetoRuta);
+					}
 					respuesta.push(nuevoObjetoRuta);
 					if(indexRutas+1<arregloRutas.length){
 						visitaRuta(arregloRutas,indexRutas+1);
 					}
 					else{
-						console.log("se han leido todas las rutas");
+						if(debug){
+							console.log("se han leido todas las rutas");
+						}
 						db.close();
 						cargarDatos(respuesta);
 					}
@@ -270,7 +286,9 @@ app.get('/getRutas',function(req,res){
 				visitaRuta(res,0);//se visita la primera ruta
 			}
 			else{
-				console.log("se han leido todas las rutas");
+				if(debug){
+					console.log("se han leido todas las rutas");
+				}
 				db.close();
 				cargarDatos(respuesta);
 			}
@@ -302,7 +320,8 @@ app.get('/updateBeacon',function(req,res){
 				cambios.forEach(function(item){
 
 					if(nuevosValoresObjeto[item] != viejosValores[0][item]){
-						console.log("LOS VALORES A ANALIZAR SI SON DIFERENTES FUERON: ",nuevosValoresObjeto[item],viejosValores[0][item]);
+						if(debug)
+							console.log("LOS VALORES A ANALIZAR SI SON DIFERENTES FUERON: ",nuevosValoresObjeto[item],viejosValores[0][item]);
 						switch(item){
 							case 'mode':
 								if(nuevosValoresObjeto.mode == "scanner"){
@@ -365,7 +384,8 @@ app.get('/updateBeacon',function(req,res){
 		MongoClient.connect(url,function(err,db){
 			if(err)throw err;
 			var dbo = db.db("mydb");
-			console.log("LOS NUEVOS VALORES EN EL OBJETO DENTRO DE LA PETICION SON: ",nuevosValoresObjeto)
+			if(debug)
+				console.log("LOS NUEVOS VALORES EN EL OBJETO DENTRO DE LA PETICION SON: ",nuevosValoresObjeto)
 			var myquery = {chipid:nuevosValoresObjeto.chipid}
 			var newvalues = {$set: nuevosValoresObjeto};
 			dbo.collection("BeaconsInPlay").update(myquery, newvalues, function(err,res){
@@ -375,11 +395,8 @@ app.get('/updateBeacon',function(req,res){
 			});
 		});
 
-		
-
-
-
-		console.log("X",req.query.x,"Y", req.query.y);
+		if(debug)
+			console.log("X",req.query.x,"Y", req.query.y);
 	}
 	else{
 		console.log("error, x and/or y are not defined");
@@ -395,7 +412,8 @@ app.get('/updateRutas',function(req,res){
 
 		var nuevosValores = JSON.parse(req.query.nuevosValores);
 
-		console.log("VALORES RECIBIDOS PARA NUEVAS RUTAS: ",nuevosValores);
+		if(debug)
+			console.log("VALORES RECIBIDOS PARA NUEVAS RUTAS: ",nuevosValores);
 
 		var MongoClient = require("mongodb").MongoClient;
 
